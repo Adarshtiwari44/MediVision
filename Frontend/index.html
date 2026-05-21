@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediVision AI - Clinical Intelligence & Imaging Diagnostics Platform</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Subtle Medical Background Image Overlay -->
+    <div class="medical-bg-overlay"></div>
+
+    <!-- Ambient Medical Glow Overlays -->
+    <div class="hud-scanlines"></div>
+    <div class="hud-ambient-glow"></div>
+
+    <!-- HTML5 Canvas for Light Cellular Particles & ECG Wave Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- 1. LANDING PAGE -->
+    <div id="landingPage" class="landing-container">
+        <div class="landing-content-card glass-card">
+            <!-- AI Doctor Illustration -->
+            <div class="landing-avatar-wrapper">
+                <svg class="ai-doctor-avatar" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <radialGradient id="avatarGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="var(--color-primary)" stop-opacity="0.3"/>
+                            <stop offset="100%" stop-color="var(--color-primary)" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+                    <!-- Glow background -->
+                    <circle cx="100" cy="100" r="90" fill="url(#avatarGlow)" class="pulse-glow-bg"/>
+                    
+                    <!-- Outer rotating diagnostic ring -->
+                    <circle cx="100" cy="100" r="80" stroke="var(--color-primary)" stroke-width="1.5" stroke-dasharray="6 8" fill="none" class="diag-ring-1"/>
+                    <circle cx="100" cy="100" r="74" stroke="var(--color-secondary)" stroke-width="1" stroke-dasharray="20 4" fill="none" class="diag-ring-2"/>
+                    
+                    <!-- Shield outline -->
+                    <path d="M100 35c24 0 45-12 45-12s5 35-5 55c-9 18-28 32-40 37-12-5-31-19-40-37-10-20-5-55-5-55s21 12 45 12z" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" class="hud-shield"/>
+                    
+                    <!-- Doctor avatar silhouette -->
+                    <circle cx="100" cy="65" r="16" stroke="var(--color-secondary)" stroke-width="2.5" fill="rgba(255, 255, 255, 0.9)"/>
+                    <circle cx="100" cy="65" r="8" fill="var(--color-primary)" opacity="0.8" class="head-core"/>
+                    
+                    <path d="M88 65c-2 8 0 16 12 16s14-8 12-16" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                    <path d="M72 105c-10 2-18 8-20 18-2 10-1 22-1 22h98s1-12-1-22c-2-10-10-16-20-18" stroke="var(--color-secondary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="rgba(255, 255, 255, 0.9)"/>
+                    
+                    <path d="M100 81v18" stroke="var(--color-primary)" stroke-width="2"/>
+                    <circle cx="100" cy="102" r="4.5" fill="var(--color-primary)" stroke="var(--color-secondary)" stroke-width="1.5" class="chest-piece"/>
+                    
+                    <line x1="100" y1="49" x2="100" y2="35" stroke="var(--color-primary)" stroke-width="1.5" stroke-dasharray="2 2"/>
+                    <line x1="84" y1="65" x2="65" y2="65" stroke="var(--color-primary)" stroke-width="1.5" stroke-dasharray="2 2"/>
+                    <line x1="116" y1="65" x2="135" y2="65" stroke="var(--color-primary)" stroke-width="1.5" stroke-dasharray="2 2"/>
+                    
+                    <circle cx="100" cy="35" r="3" fill="var(--color-primary)"/>
+                    <circle cx="65" cy="65" r="3" fill="var(--color-primary)"/>
+                    <circle cx="135" cy="65" r="3" fill="var(--color-primary)"/>
+                </svg>
+            </div>
+            
+            <h1 class="landing-title">
+                <span class="title-top">MediVision AI Platform</span>
+                MediVision <span class="glow-text">AI</span>
+            </h1>
+            <p class="landing-subtitle">“Your health journey, enhanced with intelligent medical insights.”</p>
+            <p class="landing-description">AI-powered medical assistant for reports, scans, prescriptions, and health guidance.</p>
+            
+            <button class="btn-primary landing-btn pulse-glow-btn" onclick="enterApp()">
+                <span>Enter MediVision AI</span>
+                <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </button>
+            
+            <!-- Animated ECG wave inside landing card -->
+            <div class="landing-ecg-wrapper">
+                <svg class="landing-ecg-wave" viewBox="0 0 300 40" fill="none">
+                    <path class="ecg-path" d="M0 20h80l5-8 5 24 6-32 5 20 10-4 5 10 5-10 15 0h120" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MAIN DASHBOARD PAGE -->
+    <div id="dashboardPage" class="dashboard-container hidden">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left-group" onclick="returnToLanding()">
+                <div class="logo-container">
+                    <svg class="logo-icon logo-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12h-3l-2.5 6-3.5-12L7.5 12H5" />
+                    </svg>
+                    <h1>MediVision <span class="glow-text">AI</span></h1>
+                </div>
+                <div class="diagnostic-pill">
+                    <span class="pulse-indicator"></span>
+                    <span class="pill-text">CLINICAL ENGINE ONLINE</span>
+                </div>
+            </div>
+            
+            <div class="header-system-info">
+                <span class="system-time" id="system-time">00:00:00 UTC</span>
+                <button class="btn-back-home" onclick="returnToLanding()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+                    <span>Main Deck</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="dashboard-grid">
+            <!-- Left Panel: Actions & Inputs -->
+            <section class="panel left-panel">
+                <div class="glass-card panel-card">
+                    <div class="card-header">
+                        <div class="header-title-wrapper">
+                            <span class="step-num">01</span>
+                            <h2>Document Intake</h2>
+                        </div>
+                        <div class="scanning-light"></div>
+                    </div>
+                    <p class="card-desc">Provide a diagnostic lab report (PDF) or medical imaging scan (PNG, JPG, JPEG).</p>
+                    
+                    <!-- Tab switches for Report / X-ray -->
+                    <div class="upload-tabs">
+                        <button class="tab-btn active" id="tabReport" onclick="switchTab('report')">
+                            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
+                            </svg>
+                            <span>Clinical Report</span>
+                        </button>
+                        <button class="tab-btn" id="tabXray" onclick="switchTab('xray')">
+                            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <path d="M9 3v18M15 3v18M3 9h18M3 15h18" stroke-opacity="0.3" />
+                                <circle cx="12" cy="12" r="4" stroke-width="1.5" />
+                                <path d="M12 9v6M9 12h6" />
+                            </svg>
+                            <span>X-Ray / Scan</span>
+                        </button>
+                    </div>
+
+                    <div class="upload-zone" id="uploadZone">
+                        <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.avif,.AVIF">
+                        <!-- Neon Sweep Scanner -->
+                        <div class="laser-scanner"></div>
+                        <div class="upload-zone-content">
+                            <!-- Floating Medical Icons -->
+                            <!-- 1. Stethoscope SVG -->
+                            <svg class="floating-upload-icon float-icon-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 3v6a7 7 0 0 0 14 0V3" />
+                                <path d="M3 3h4M17 3h4" />
+                                <path d="M12 16v3" />
+                                <circle cx="12" cy="20" r="2" />
+                            </svg>
+                            <!-- 2. ECG Line SVG -->
+                            <svg class="floating-upload-icon float-icon-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                            </svg>
+                            <!-- 3. Medical Report SVG -->
+                            <svg class="floating-upload-icon float-icon-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
+                            </svg>
+                            <!-- 4. Brain SVG -->
+                            <svg class="floating-upload-icon float-icon-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1 0-3.12 3 3 0 0 1 0-4.88 2.5 2.5 0 0 1 0-3.12A2.5 2.5 0 0 1 9.5 2zM14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 0-3.12 3 3 0 0 0 0-4.88 2.5 2.5 0 0 0 0-3.12A2.5 2.5 0 0 0 14.5 2z" />
+                            </svg>
+                            <!-- 5. Medicine Capsule SVG -->
+                            <svg class="floating-upload-icon float-icon-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="9" width="20" height="6" rx="3" transform="rotate(-45 12 12)" />
+                                <line x1="7.5" y1="16.5" x2="16.5" y2="7.5" />
+                            </svg>
+                            <!-- 6. Hospital Shield Cross SVG -->
+                            <svg class="floating-upload-icon float-icon-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM12 8v8M8 12h8" />
+                            </svg>
+
+                            <div class="animated-upload-icon-wrapper">
+                                <svg class="upload-icon medical-report-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <!-- Document page outline -->
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" class="doc-page"></path>
+                                    <polyline points="14 2 14 8 20 8" class="doc-fold"></polyline>
+                                    <!-- Pulse medical line -->
+                                    <path d="M7 13h10" class="doc-line line-1"></path>
+                                    <!-- Medical cross representation -->
+                                    <path d="M12 9v4M10 11h4" class="doc-cross"></path>
+                                    <path d="M7 17h6" class="doc-line line-2"></path>
+                                </svg>
+                                <div class="pulse-rings">
+                                    <div class="pulse-ring pulse-ring-1"></div>
+                                    <div class="pulse-ring pulse-ring-2"></div>
+                                </div>
+                            </div>
+                            <span class="upload-primary-text" id="uploadPrimaryText">🩺 Upload Clinical Report</span>
+                            <span class="upload-secondary-text" id="uploadSecondaryText">Drop your PDF, Blood Report, MRI, X-ray, or Prescription here for AI-powered medical analysis.</span>
+                            <span class="upload-supported-text" id="uploadSupportedText">Supported: PDF • PNG • JPG • MRI • X-Ray</span>
+                        </div>
+                    </div>
+
+                    <!-- Uploaded File Card — lives OUTSIDE the upload zone so it never breaks layout -->
+                    <div class="selected-file-info" id="selectedFileInfo">
+                        <div class="file-info-left">
+                            <svg class="file-type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                            </svg>
+                            <span class="file-name" id="selectedFileName">No file selected</span>
+                        </div>
+                        <button class="btn-clear" id="btnClearFile" title="Eject File">&times;</button>
+                    </div>
+
+                    <button class="btn-primary glow-btn" id="btnAnalyze" onclick="uploadReport()">
+                        <span id="btnAnalyzeText">RUN CLINICAL SYNTHESIS</span>
+                        <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Right Panel: Dashboard / Analysis Outputs -->
+            <section class="panel right-panel">
+                <!-- Loader (Pulsing Medical Diagnostics Scan) -->
+                <div class="loader-container" id="loader">
+                    <div class="scanner-rings">
+                        <div class="ring ring-1"></div>
+                        <div class="ring ring-2"></div>
+                        <div class="ring ring-3"></div>
+                        <svg class="loader-heartbeat" viewBox="0 0 100 40" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M0 20 L30 20 L38 5 L46 35 L54 15 L60 25 L65 20 L100 20" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <p class="loader-text">RUNNING CLINICAL DIAGNOSTIC PIPELINE...</p>
+                    <p class="loader-subtext">Executing OCR segmentation and querying clinical LMM intelligence models</p>
+                </div>
+
+                <!-- Welcome/Instruction Card -->
+                <div class="glass-card welcome-card" id="welcomeCard">
+                    <div class="pulse-ring">
+                        <svg class="welcome-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="16" x2="12" y2="12" />
+                            <line x1="12" y1="8" x2="12.01" y2="8" />
+                        </svg>
+                    </div>
+                    <h3>Awaiting Clinical Intake Data</h3>
+                    <p>Integrate a clinical pathology report or diagnostic scan in the left terminal. The artificial intelligence engine will read the data stream, run OCR diagnostics, and display a clinical synthesis matrix.</p>
+                    <div class="welcome-terminal-stats">
+                        <span class="stat-item"><span class="bullet cyan"></span> OCR Extraction: Active</span>
+                        <span class="stat-item"><span class="bullet purple"></span> LMM Core: Standby</span>
+                    </div>
+                </div>
+
+                <!-- Analysis Results (Hidden by default) -->
+                <div class="results-layout" id="result" style="display: none;">
+                    <div class="section-title-wrapper">
+                        <div class="title-left">
+                            <h2>CLINICAL SYNTHESIS MATRIX</h2>
+                            <span class="badge" id="reportFilenameBadge">report.pdf</span>
+                        </div>
+                        <button id="btnToggleLang" class="lang-toggle-btn" onclick="toggleLanguage()">
+                            <span class="lang-icon">🌐</span>
+                            <span id="langText">English</span>
+                            <span class="lang-divider">|</span>
+                            <span id="langSubText">हिंदी</span>
+                        </button>
+                    </div>
+
+                    <!-- 6 Structured Dashboard Cards -->
+                    <div class="dashboard-cards">
+                        <!-- 1. Summary Card -->
+                        <div class="result-card card-glow-blue" id="cardSummary">
+                            <div class="result-card-header">
+                                <div class="card-icon-wrapper blue-icon">
+                                    <!-- Clinical File/Report Icon -->
+                                    <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                        <line x1="16" y1="13" x2="8" y2="13" />
+                                        <line x1="16" y1="17" x2="8" y2="17" />
+                                    </svg>
+                                </div>
+                                <h3>Executive Summary</h3>
+                            </div>
+                            <div class="result-card-content" id="analysisSummary">Loading...</div>
+                        </div>
+
+                        <!-- 2. Possible Diseases Card -->
+                        <div class="result-card card-glow-red" id="cardDiseases">
+                            <div class="result-card-header">
+                                <div class="card-icon-wrapper red-icon">
+                                    <!-- Medical Shield Icon -->
+                                    <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                        <path d="M12 8v4M12 16h.01" stroke-width="2.5" />
+                                    </svg>
+                                </div>
+                                <h3>Potential Pathologies</h3>
+                            </div>
+                            <div class="result-card-content" id="analysisDiseases">Loading...</div>
+                        </div>
+
+                        <!-- 3. Diet Card -->
+                        <div class="result-card card-glow-green" id="cardDiet">
+                            <div class="result-card-header">
+                                <div class="card-icon-wrapper green-icon">
+                                    <!-- Salad Bowl / Diet Icon -->
+                                    <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" opacity="0.3" />
+                                        <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
+                                        <path d="M12 6V2a9 9 0 0 0-9 9h4" />
+                                    </svg>
+                                </div>
+                                <h3>Dietary Guidance</h3>
+                            </div>
+                            <div class="result-card-content" id="analysisDiet">Loading...</div>
+                        </div>
+
+                        <!-- 4. Exercise Card -->
+                        <div class="result-card card-glow-purple" id="cardExercise">
+                            <div class="result-card-header">
+                                <div class="card-icon-wrapper purple-icon">
+                                    <!-- Activity pulse rate heart Icon -->
+                                    <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                        <path d="M6 12h2.5l1.5-3 2 6 1.5-4 1.5 1H18" stroke-width="1.8" />
+                                    </svg>
+                                </div>
+                                <h3>Exercise Protocol</h3>
+                            </div>
+                            <div class="result-card-content" id="analysisExercise">Loading...</div>
+                        </div>
+
+                        <!-- 5. Recommended Medicines Card -->
+                        <div class="result-card card-glow-gold" id="cardMedicines">
+                            <div class="result-card-header">
+                                <div class="card-icon-wrapper gold-icon">
+                                    <!-- Pill / Medicine capsule Icon -->
+                                    <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="2" y="9" width="20" height="6" rx="3" transform="rotate(-45 12 12)" />
+                                        <line x1="7.5" y1="16.5" x2="16.5" y2="7.5" />
+                                    </svg>
+                                </div>
+                                <h3>Recommended Medicines</h3>
+                            </div>
+                            <div class="result-card-content" id="analysisMedicines">Loading...</div>
+                        </div>
+
+                        <!-- 6. Lifestyle Suggestions Card -->
+                        <div class="result-card card-glow-cyan" id="cardLifestyle">
+                            <div class="result-card-header">
+                                <div class="card-icon-wrapper cyan-icon">
+                                    <!-- Wellbeing Sun / Stethoscope Icon -->
+                                    <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" opacity="0.3" />
+                                        <path d="M12 2a10 10 0 0 0-10 10c0 5.5 4.5 10 10 10s10-4.5 10-10" />
+                                        <path d="M18 12a6 6 0 0 1-6 6M12 6a6 6 0 0 1 6 6" />
+                                        <circle cx="12" cy="12" r="2" />
+                                    </svg>
+                                </div>
+                                <h3>Lifestyle Suggestions</h3>
+                            </div>
+                            <div class="result-card-content" id="analysisLifestyle">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Extracted Text Card (Collapsible) -->
+                    <div class="result-card ocr-card collapsed">
+                        <div class="result-card-header collapsible-trigger" onclick="toggleOcrText()">
+                            <div class="header-left">
+                                <div class="card-icon-wrapper gray-icon">
+                                    <!-- Clipboard database check icon -->
+                                    <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                                        <polyline points="9 11 12 14 22 4" opacity="0.2" />
+                                    </svg>
+                                </div>
+                                <h3>Raw Diagnostic Stream (OCR Extraction)</h3>
+                            </div>
+                            <svg class="chevron-icon" id="ocrChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </div>
+                        <div class="ocr-text-content collapsed" id="ocrTextContent">
+                            <!-- Text populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 3. FLOATING AI CHATBOT WIDGET -->
+    <!-- Toggle Launch Button -->
+    <button id="btnChatToggle" class="floating-chat-toggle disabled" onclick="toggleChatWidget()">
+        <div class="chat-toggle-pulse-glow"></div>
+        <svg class="chat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        <span class="chat-toggle-badge">AI</span>
+    </button>
+
+    <!-- Chat Widget Panel -->
+    <div id="chatWidget" class="chat-widget-panel glass-card chat-widget-closed">
+        <div class="chat-widget-header">
+            <div class="avatar-info">
+                <div class="avatar-glow">
+                    <!-- Clean Stethoscope/Clinical Assistant Icon -->
+                    <svg class="avatar-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4.82 4.82A9 9 0 0 0 12 19.08V22h3v-2.92A9 9 0 0 0 20.3 7.7" />
+                        <path d="M12 19.08a9 9 0 0 1-7.18-14.26" opacity="0.3" />
+                        <rect x="9" y="2" width="6" height="4" rx="1" />
+                        <circle cx="12" cy="11" r="3" />
+                    </svg>
+                </div>
+                <div>
+                    <h4>MediVision Clinical Assistant</h4>
+                    <span class="status-online">
+                        <span class="online-dot"></span>
+                        Secure Advisory Stream
+                    </span>
+                </div>
+            </div>
+            <button class="btn-close-chat" onclick="toggleChatWidget()" title="Close Stream">&times;</button>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-bubble ai-bubble system-bubble">
+                Integrate clinical pathology report or diagnostic scan to unlock advisory stream.
+            </div>
+        </div>
+
+        <div class="chat-input-wrapper">
+            <textarea id="question" placeholder="Ask details about report or metrics..." disabled></textarea>
+            <button id="btnAsk" onclick="askQuestion()" disabled title="Send Query">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+</html>
