@@ -10,35 +10,73 @@ load_dotenv()
 # Global state for chatbot conversation context memory
 last_report_text = ""
 conversation_history = []
-conversation_language = None
 
-def detect_user_language(text: str) -> str:
+EXPLICIT_LANGUAGES = {
+    "telugu": ["telugu", "తెలుగులో", "తెలుగు", "in telugu"],
+    "gujarati": ["gujarati", "gujrati", "ગુજરાતીમાં", "ગુજરાતી", "in gujarati"],
+    "hindi": ["hindi", "hinglish", "हिन्दी में", "हिन्दी", "हिंदी", "in hindi", "samjhao", "samjhaye", "samjho", "batao", "bataiye", "meri report", "samjhayein"],
+    "tamil": ["tamil", "தமிழில்", "தமிழ்", "in tamil"],
+    "kannada": ["kannada", "ಕನ್ನಡದಲ್ಲಿ", "ಕನ್ನಡ", "in kannada"],
+    "bengali": ["bengali", "বাংলায়", "বাংলা", "in bengali"],
+    "marathi": ["marathi", "मराठीत", "मराठी", "in marathi"],
+    "punjabi": ["punjabi", "ਪੰਜਾਬੀ ਵਿੱਚ", "ਪੰਜਾਬੀ", "in punjabi"],
+    "malayalam": ["malayalam", "മലയാളത്തിൽ", "മലയാളം", "in malayalam"],
+    "english": ["english", "in english", "angreji", "angrezi"]
+}
+
+def detect_language(text: str) -> str:
     """
-    Detects the language of the input text.
-    Returns one of: 'gujarati', 'hindi_hinglish', 'english', or 'unknown'.
+    Detects the language of the text.
+    Priority:
+    1. Explicit language request in CURRENT message.
+    2. Current user message language (via script characters or common markers).
+    3. Fallback to langdetect.
     """
     if not text:
-        return 'english'
+        return None
         
     text_lower = text.lower()
     
-    # 1. Explicit request words
-    if any(kw in text_lower for kw in ["gujarati", "gujrati", "guj", "ગુજરાતી"]):
-        return "gujarati"
-    if any(kw in text_lower for kw in ["hindi", "hinglish", "हिन्दी"]):
-        return "hindi_hinglish"
-    if any(kw in text_lower for kw in ["english", "angreji", "angrezi"]):
-        return "english"
-        
-    # 2. Check for script characters
-    # Gujarati character range: \u0a80-\u0aff
+    # 1. Explicit language request in the message
+    for lang, markers in EXPLICIT_LANGUAGES.items():
+        for marker in markers:
+            if marker in text_lower:
+                return lang
+                
+    # Check for general "in [Language]" patterns
+    match = re.search(r'\bin\s+([a-zA-Z]+)\b', text_lower)
+    if match:
+        requested_lang = match.group(1)
+        if requested_lang not in ["detail", "brief", "summary", "my", "this", "our", "a", "the", "short", "long"]:
+            return requested_lang
+
+    # 2. Check script character ranges
+    # Gujarati script: \u0a80-\u0aff
     if any('\u0a80' <= char <= '\u0aff' for char in text):
         return "gujarati"
-    # Devanagari character range: \u0900-\u097f
+    # Telugu script: \u0c00-\u0c7f
+    if any('\u0c00' <= char <= '\u0c7f' for char in text):
+        return "telugu"
+    # Devanagari script (Hindi, Marathi): \u0900-\u097f
     if any('\u0900' <= char <= '\u097f' for char in text):
-        return "hindi_hinglish"
-        
-    # 3. Check for Hinglish and Gujarati-in-Latin words/phrases
+        return "hindi"
+    # Tamil script: \u0b80-\u0bff
+    if any('\u0b80' <= char <= '\u0bff' for char in text):
+        return "tamil"
+    # Kannada script: \u0c80-\u0cff
+    if any('\u0c80' <= char <= '\u0cff' for char in text):
+        return "kannada"
+    # Bengali script: \u0980-\u09ff
+    if any('\u0980' <= char <= '\u09ff' for char in text):
+        return "bengali"
+    # Malayalam script: \u0d00-\u0d7f
+    if any('\u0d00' <= char <= '\u0d7f' for char in text):
+        return "malayalam"
+    # Gurmukhi (Punjabi) script: \u0a00-\u0a7f
+    if any('\u0a00' <= char <= '\u0a7f' for char in text):
+        return "punjabi"
+
+    # 3. Check for Hinglish / Gujarati-in-Latin words
     hinglish_markers = {
         "samjhao", "samjhaye", "samjho", "batao", "bataiye", "meri", "mera", "mere", "kya", "hai", 
         "nahi", "nhi", "kuch", "aapke", "samjhayein", "diye", "liye", "gaya", "raha", "rahi", "hoga", "sakte"
@@ -47,33 +85,35 @@ def detect_user_language(text: str) -> str:
         "samjhavo", "samjhavi", "lakhajo", "lakho", "shu", "che", "chhe", "maru", "mari", "mara", "pan", 
         "nathi", "ane", "takarif", "dukhavo", "dava"
     }
-    
     words = re.findall(r'[a-zA-Z]+', text_lower)
-    
-    gu_count = sum(1 for w in words if w in gujarati_markers)
-    hi_count = sum(1 for w in words if w in hinglish_markers)
-    
-    if gu_count > 0 and gu_count >= hi_count:
+    if any(w in gujarati_markers for w in words):
         return "gujarati"
-    if hi_count > 0 and hi_count > gu_count:
-        return "hindi_hinglish"
-        
-    # 4. Fallback: use langdetect library for a probabilistic check
+    if any(w in hinglish_markers for w in words):
+        return "hindi"
+
+    # 4. Fallback: langdetect
     try:
         from langdetect import detect
-        lang = detect(text)
-        if lang == 'gu':
-            return 'gujarati'
-        elif lang in ['hi', 'ne', 'mr']: # Hindi, Nepali, Marathi
-            return 'hindi_hinglish'
-        elif lang == 'en':
-            # Confirm it's English only if no Hinglish or Gujarati markers are present
-            if not any(w in hinglish_markers for w in words) and not any(w in gujarati_markers for w in words):
-                return 'english'
+        lang_code = detect(text)
+        code_to_lang = {
+            'gu': 'gujarati',
+            'hi': 'hindi',
+            'te': 'telugu',
+            'ta': 'tamil',
+            'kn': 'kannada',
+            'bn': 'bengali',
+            'mr': 'marathi',
+            'pa': 'punjabi',
+            'ml': 'malayalam',
+            'en': 'english'
+        }
+        if lang_code in code_to_lang:
+            return code_to_lang[lang_code]
     except Exception:
         pass
-        
-    return 'unknown'
+
+    return None
+
 
 
 def parse_json_safely(text: str) -> dict:
@@ -702,7 +742,7 @@ def medical_chatbot(question, report_text):
     """
     Answers a medical question based on the medical report and previous context using the Gemini REST API.
     """
-    global last_report_text, conversation_history, conversation_language
+    global last_report_text, conversation_history
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -712,88 +752,74 @@ def medical_chatbot(question, report_text):
     if report_text != last_report_text:
         conversation_history = []
         last_report_text = report_text
-        conversation_language = None
         
     model_name = os.getenv("GEMINI_MODEL", "gemini-pro")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-    
-    # Format conversation history while filtering out any contaminated messages
-    history_str = ""
-    sanitized_history = []
+
+    # 1. Explicit language override detector BEFORE building Gemini prompt
+    clean_question = question
+    if clean_question.startswith("[Hinglish Mode]"):
+        clean_question = clean_question[len("[Hinglish Mode]"):].strip()
+        detected_language = "hindi"
+    else:
+        # Priority 1: Explicit language request in CURRENT message OR Priority 2: Current user message language
+        detected_language = detect_language(clean_question)
+
+    # Filter history to remove any old contamination messages (like "currently in English...")
     blacklist_phrases = [
         "comfortable in english", "communicate in english", "english or hinglish", 
-        "prefer english", "language preference", "language limitation"
+        "prefer english", "language preference", "language limitation",
+        "current session is english", "active conversation language", "session is english",
+        "conversation is currently in english"
     ]
+    sanitized_history = []
     for msg in conversation_history[-10:]:
         content_lower = msg['content'].lower()
         if any(phrase in content_lower for phrase in blacklist_phrases):
             continue
         sanitized_history.append(msg)
-        
+
+    # Priority 3: Previous conversation memory
+    if not detected_language:
+        for msg in reversed(sanitized_history):
+            if msg.get("role") == "User":
+                prev_lang = detect_language(msg.get("content", ""))
+                if prev_lang:
+                    detected_language = prev_lang
+                    break
+                    
+    # Default fallback
+    if not detected_language:
+        detected_language = "english"
+
+    # If the user switches language, clear history to avoid cross-language contamination
+    prev_active_lang = None
+    for msg in reversed(sanitized_history):
+        if msg.get("role") == "User":
+            p_lang = detect_language(msg.get("content", ""))
+            if p_lang:
+                prev_active_lang = p_lang
+                break
+    if prev_active_lang and prev_active_lang != detected_language:
+        conversation_history = []
+        sanitized_history = []
+
+    history_str = ""
     for msg in sanitized_history:
         history_str += f"{msg['role']}: {msg['content']}\n"
 
-    # Automatic language detection & conversational memory
-    clean_question = question
-    if clean_question.startswith("[Hinglish Mode]"):
-        clean_question = clean_question[len("[Hinglish Mode]"):].strip()
-        detected_lang = 'hindi_hinglish'
-    else:
-        detected_lang = detect_user_language(clean_question)
-
-    if detected_lang in ['gujarati', 'hindi_hinglish']:
-        conversation_language = detected_lang
-    elif detected_lang == 'english':
-        if not conversation_language or any(kw in clean_question.lower() for kw in ["english", "in english", "angreji", "angrezi", "translate to english"]):
-            conversation_language = 'english'
-    
-    if not conversation_language:
-        conversation_language = 'english'
-
-    # Build prompt instructions based on the active language memory
-    if conversation_language == 'gujarati':
-        lang_instruction = """
-        Active Language is GUJARATI.
-        - You MUST respond fully in Gujarati (using Gujarati script).
-        - If the user asks in English but their active conversation context is Gujarati, respond in Gujarati.
-        - Translate all headings, content, and bullet points to Gujarati.
-        - Example response structure:
-          🩺 તમારી રિપોર્ટ મુજબ તમારું કોલેસ્ટ્રોલ મોટાભાગે સામાન્ય છે.
-
-          💚 HDL થોડું ઓછું છે, એટલે:
-          • દરરોજ 30 મિનિટ ચાલવું
-          • ડ્રાયફ્રૂટ્સ ખાવા
-          • તેલિયું ખાવાનું ઓછું કરવું
-
-          🥗 લીલા શાકભાજી અને ફાઈબરવાળો ખોરાક લાભદાયક રહેશે.
-
-          ⚠️ આ AI આધારિત માર્ગદર્શન છે. કૃપા કરીને ડૉક્ટરની સલાહ જરૂર લો.
-        """
-    elif conversation_language == 'hindi_hinglish':
-        lang_instruction = """
-        Active Language is HINDI / HINGLISH.
-        - You MUST respond in Hindi/Hinglish (mix of Hindi and English words as spoken naturally, or Hindi Devanagari script depending on user's input style).
-        - Keep headings and formatting professional, utilizing natural Hindi/Hinglish.
-          * E.g. "🩸 Blood Report Update", "🥗 Kya madad kar sakta hai:", "🏃 Health Tips:", "💊 Dawa:", "🩺 Disclaimer:"
-        - Medical disclaimer in Hinglish/Hindi: "🩺 Doctor se clinical confirmation ke liye consult karein." (Only append if query is medical/clinical in nature).
-        """
-    else:
-        lang_instruction = """
-        Active Language is ENGLISH.
-        - Respond in simple, clear, and professional English.
-        - Medical disclaimer in English: "🩺 Please review these findings with a doctor for clinical confirmation." (Only append if query is medical/clinical in nature).
-        """
+    target_language = detected_language
 
     prompt = f"""
     You are MediVision AI, a supportive, highly conversational, and friendly AI doctor assistant, behaving like Gemini or a ChatGPT medical assistant. You help the patient understand their health data, medical report parameters, or imaging scans in a warm, empathetic, and human tone.
 
     MULTILINGUAL SYSTEM PROMPT RULES (CRITICAL):
-    Always respond in the SAME language as the user.
-    Never mention language preference or limitations.
-    Never force English.
-    Maintain conversational continuity in the detected language.
+    Always respond in the language explicitly requested by the user.
+    If no explicit language is requested, respond in the language of the user's message.
     
-    {lang_instruction}
+    Target Response Language: {target_language.upper()}
+    
+    - Medical disclaimer: You must append a brief, professional medical disclaimer in the target language (e.g. "🩺 Please consult a doctor for clinical confirmation of these findings" or the translation in {target_language.upper()}) at the end of your response, but ONLY if the user's query is medical or clinical in nature. Do NOT append disclaimers to casual greetings or general non-medical chit-chat.
 
     CRITICAL SAFETY & TONE INSTRUCTIONS:
     - Never present any finding or diagnosis as absolute, sure, or confirmed. Frame all findings as potential, possible, or observed features needing clinical correlation.
@@ -856,7 +882,7 @@ def medical_chatbot(question, report_text):
     }
 
     # Print debug logs temporarily
-    detected_language = conversation_language
+    detected_language = target_language
     print("Detected Language:", detected_language)
     try:
         print("Final Generated Prompt:", prompt)
