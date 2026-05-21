@@ -1,6 +1,7 @@
 import os
 import requests
 import json
+import re
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -9,6 +10,71 @@ load_dotenv()
 # Global state for chatbot conversation context memory
 last_report_text = ""
 conversation_history = []
+conversation_language = None
+
+def detect_user_language(text: str) -> str:
+    """
+    Detects the language of the input text.
+    Returns one of: 'gujarati', 'hindi_hinglish', 'english', or 'unknown'.
+    """
+    if not text:
+        return 'english'
+        
+    text_lower = text.lower()
+    
+    # 1. Explicit request words
+    if any(kw in text_lower for kw in ["gujarati", "gujrati", "guj", "ગુજરાતી"]):
+        return "gujarati"
+    if any(kw in text_lower for kw in ["hindi", "hinglish", "हिन्दी"]):
+        return "hindi_hinglish"
+    if any(kw in text_lower for kw in ["english", "angreji", "angrezi"]):
+        return "english"
+        
+    # 2. Check for script characters
+    # Gujarati character range: \u0a80-\u0aff
+    if any('\u0a80' <= char <= '\u0aff' for char in text):
+        return "gujarati"
+    # Devanagari character range: \u0900-\u097f
+    if any('\u0900' <= char <= '\u097f' for char in text):
+        return "hindi_hinglish"
+        
+    # 3. Check for Hinglish and Gujarati-in-Latin words/phrases
+    hinglish_markers = {
+        "samjhao", "samjhaye", "samjho", "batao", "bataiye", "meri", "mera", "mere", "kya", "hai", 
+        "nahi", "nhi", "kuch", "aapke", "samjhayein", "diye", "liye", "gaya", "raha", "rahi", "hoga", "sakte"
+    }
+    gujarati_markers = {
+        "samjhavo", "samjhavi", "lakhajo", "lakho", "shu", "che", "chhe", "maru", "mari", "mara", "pan", 
+        "nathi", "ane", "takarif", "dukhavo", "dava"
+    }
+    
+    words = re.findall(r'[a-zA-Z]+', text_lower)
+    
+    gu_count = sum(1 for w in words if w in gujarati_markers)
+    hi_count = sum(1 for w in words if w in hinglish_markers)
+    
+    if gu_count > 0 and gu_count >= hi_count:
+        return "gujarati"
+    if hi_count > 0 and hi_count > gu_count:
+        return "hindi_hinglish"
+        
+    # 4. Fallback: use langdetect library for a probabilistic check
+    try:
+        from langdetect import detect
+        lang = detect(text)
+        if lang == 'gu':
+            return 'gujarati'
+        elif lang in ['hi', 'ne', 'mr']: # Hindi, Nepali, Marathi
+            return 'hindi_hinglish'
+        elif lang == 'en':
+            # Confirm it's English only if no Hinglish or Gujarati markers are present
+            if not any(w in hinglish_markers for w in words) and not any(w in gujarati_markers for w in words):
+                return 'english'
+    except Exception:
+        pass
+        
+    return 'unknown'
+
 
 def parse_json_safely(text: str) -> dict:
     """
@@ -636,7 +702,7 @@ def medical_chatbot(question, report_text):
     """
     Answers a medical question based on the medical report and previous context using the Gemini REST API.
     """
-    global last_report_text, conversation_history
+    global last_report_text, conversation_history, conversation_language
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -646,6 +712,7 @@ def medical_chatbot(question, report_text):
     if report_text != last_report_text:
         conversation_history = []
         last_report_text = report_text
+        conversation_language = None
         
     model_name = os.getenv("GEMINI_MODEL", "gemini-pro")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
@@ -655,9 +722,63 @@ def medical_chatbot(question, report_text):
     for msg in conversation_history[-10:]:
         history_str += f"{msg['role']}: {msg['content']}\n"
 
+    # Automatic language detection & conversational memory
+    clean_question = question
+    if clean_question.startswith("[Hinglish Mode]"):
+        clean_question = clean_question[len("[Hinglish Mode]"):].strip()
+        detected_lang = 'hindi_hinglish'
+    else:
+        detected_lang = detect_user_language(clean_question)
+
+    if detected_lang in ['gujarati', 'hindi_hinglish']:
+        conversation_language = detected_lang
+    elif detected_lang == 'english':
+        if not conversation_language or any(kw in clean_question.lower() for kw in ["english", "in english", "angreji", "angrezi", "translate to english"]):
+            conversation_language = 'english'
+    
+    if not conversation_language:
+        conversation_language = 'english'
+
+    # Build prompt instructions based on the active language memory
+    if conversation_language == 'gujarati':
+        lang_instruction = """
+        Active Language is GUJARATI.
+        - You MUST respond fully in Gujarati (using Gujarati script).
+        - If the user asks in English but their active conversation context is Gujarati, respond in Gujarati.
+        - Do not mix English or Hindi. Keep the Gujarati natural, simple, and clean.
+        - Do not say you are more comfortable in English or mention any language limitations.
+        - Translate all headings and bullet points to Gujarati.
+          * E.g. "🩸 બ્લડ રિપોર્ટ અપડેટ", "🥗 શું મદદ કરી શકે:", "🏃 આરોગ્ય ટિપ્સ:", "💊 દવા:", "🩺 અસ્વીકરણ:"
+        - Medical disclaimer in Gujarati: "🩺 કૃપા કરીને ક્લિનિકલ પુષ્ટિ માટે આ તારણોની ડૉક્ટર સાથે સમીક્ષા કરો." (Only append if query is medical/clinical in nature).
+        """
+    elif conversation_language == 'hindi_hinglish':
+        lang_instruction = """
+        Active Language is HINDI / HINGLISH.
+        - You MUST respond in Hindi/Hinglish (mix of Hindi and English words as spoken naturally, or Hindi Devanagari script depending on user's input style).
+        - If the user uses Hinglish/Hindi, reply naturally in Hindi/Hinglish. Do not default to English.
+        - Do not say you are more comfortable in English or mention any language limitations.
+        - Keep headings and formatting professional, utilizing natural Hindi/Hinglish.
+          * E.g. "🩸 Blood Report Update", "🥗 Kya madad kar sakta hai:", "🏃 Health Tips:", "💊 Dawa:", "🩺 Disclaimer:"
+        - Medical disclaimer in Hinglish/Hindi: "🩺 Doctor se clinical confirmation ke liye consult karein." (Only append if query is medical/clinical in nature).
+        """
+    else:
+        lang_instruction = """
+        Active Language is ENGLISH.
+        - Respond in simple, clear, and professional English.
+        - Medical disclaimer in English: "🩺 Please review these findings with a doctor for clinical confirmation." (Only append if query is medical/clinical in nature).
+        """
+
     prompt = f"""
-    You are MediVision AI, a supportive, highly conversational, and friendly AI doctor assistant. You help the patient understand their health data, medical report parameters, or imaging scans in a warm, empathetic, and human tone.
-    Your main goal is to explain things in simple English (or Hinglish if requested) so that a normal, non-medical person can easily understand.
+    You are MediVision AI, a supportive, highly conversational, and friendly AI doctor assistant, behaving like Gemini or a ChatGPT medical assistant. You help the patient understand their health data, medical report parameters, or imaging scans in a warm, empathetic, and human tone.
+
+    MULTILINGUAL SYSTEM PROMPT RULES (CRITICAL):
+    Always respond in the same language used by the user.
+    Maintain the same conversational tone and language across the session.
+    If the user uses Gujarati, reply fully in Gujarati.
+    If the user uses Hindi or Hinglish, reply naturally in Hindi/Hinglish.
+    Do not default to English.
+    
+    {lang_instruction}
 
     CRITICAL SAFETY & TONE INSTRUCTIONS:
     - Never present any finding or diagnosis as absolute, sure, or confirmed. Frame all findings as potential, possible, or observed features needing clinical correlation.
@@ -670,10 +791,10 @@ def medical_chatbot(question, report_text):
 
     CHATBOT RESPONSE STYLE RULES:
     1. Human & Supportive Tone: Be warm, friendly, reassuring, and conversational. Speak like a caring doctor, not a cold textbook.
-    2. Simple Language: Use very simple English, short sentences, and avoid hard medical jargon. If you must use a medical term, explain it immediately in simple brackets.
+    2. Simple Language: Use very simple language, short sentences, and avoid hard medical jargon. If you must use a medical term, explain it immediately in simple brackets in the active language.
     3. Medium Length: Keep responses medium length (not too long, not too short).
     4. Structural Formatting:
-       - Use headings naturally (e.g. "🩸 Blood Report Update", "🥗 What may help:", "🏃 Health Tips:", "💊 Medicine:", "🩺 Disclaimer:").
+       - Use headings naturally.
        - Use bullet points for lists.
        - Keep paragraphs short (1-2 sentences).
     5. Emojis & Inline SVGs: Use relevant emojis naturally. In your responses, when explaining medical systems or recommendations, feel free to embed small, lightweight inline SVGs inside your text to visualize clinical components.
@@ -684,18 +805,10 @@ def medical_chatbot(question, report_text):
        * Pill / Medicine: <svg class="medical-chat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="9" width="20" height="6" rx="3" transform="rotate(-45 12 12)"/><line x1="7.5" y1="16.5" x2="16.5" y2="7.5"/></svg>
        * Brain: <svg class="medical-chat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 6v12M8 10h8M9 14h6" opacity="0.4"/></svg>
        Keep SVGs extremely clean and lightweight, wrapping them inline in markdown paragraphs.
-    6. Language Flexibility (English vs Hinglish):
-       - If the user's question has a "[Hinglish Mode]" instruction prefix, you MUST reply in simple Hindi-English mix (Hinglish) that is easy for normal Indian users. Use emojis naturally.
-       - Example Hinglish Response structure:
-         🩸 Aapke blood report me RBC thoda low dikh raha hai.
-         Ye kabhi-kabhi iron deficiency ya weakness ki wajah se ho sakta hai.
-         🥗 What may help:
-         • Spinach (paalak) aur Beetroot (chukandar) khayein.
-         🩺 Doctor consultation recommended.
-    7. Response Length Control:
-       - Brief/Casual queries (greetings like "Hi", "Hello", "How are you", or thanks like "Thank you", "Thanks") MUST receive a brief, warm response (1 to 2 sentences) in the target language (English or Hinglish), with no disclaimers.
-    8. Dynamic Disclaimers:
-       - Only append a brief medical disclaimer (e.g., "🩺 Please review these findings with a doctor for clinical confirmation." or "🩺 Doctor se clinical confirmation ke liye consult karein.") if the patient's query is medical or clinical in nature. Do NOT append it to casual chit-chat.
+    6. Response Length Control:
+       - Brief/Casual queries (greetings like "Hi", "Hello", "How are you", or thanks like "Thank you", "Thanks", "Aabhar", "Dhanyawad", "Shukriya") MUST receive a brief, warm response (1 to 2 sentences) in the active language, with no disclaimers.
+    7. Dynamic Disclaimers:
+       - Follow the medical disclaimer instructions defined above. Do NOT append disclaimers to casual chit-chat, only to medical or clinical queries.
 
     Patient's Report Data (if any):
     ---
@@ -762,6 +875,7 @@ def medical_chatbot(question, report_text):
     conversation_history.append({"role": "AI", "content": text})
 
     return text
+
 
 
 def analyze_xray_image(image_path):
