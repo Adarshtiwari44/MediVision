@@ -4,7 +4,7 @@
 let selectedFile = null;
 let currentReportText = "";
 let isChatUnlocked = false;
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = "https://medivision-backend-o22d.onrender.com";
 
 let currentLanguage = "en";
 let currentAnalysisData = null;
