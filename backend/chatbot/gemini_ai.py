@@ -717,9 +717,20 @@ def medical_chatbot(question, report_text):
     model_name = os.getenv("GEMINI_MODEL", "gemini-pro")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
     
-    # Format conversation history
+    # Format conversation history while filtering out any contaminated messages
     history_str = ""
+    sanitized_history = []
+    blacklist_phrases = [
+        "comfortable in english", "communicate in english", "english or hinglish", 
+        "prefer english", "language preference", "language limitation"
+    ]
     for msg in conversation_history[-10:]:
+        content_lower = msg['content'].lower()
+        if any(phrase in content_lower for phrase in blacklist_phrases):
+            continue
+        sanitized_history.append(msg)
+        
+    for msg in sanitized_history:
         history_str += f"{msg['role']}: {msg['content']}\n"
 
     # Automatic language detection & conversational memory
@@ -745,18 +756,23 @@ def medical_chatbot(question, report_text):
         Active Language is GUJARATI.
         - You MUST respond fully in Gujarati (using Gujarati script).
         - If the user asks in English but their active conversation context is Gujarati, respond in Gujarati.
-        - Do not mix English or Hindi. Keep the Gujarati natural, simple, and clean.
-        - Do not say you are more comfortable in English or mention any language limitations.
-        - Translate all headings and bullet points to Gujarati.
-          * E.g. "🩸 બ્લડ રિપોર્ટ અપડેટ", "🥗 શું મદદ કરી શકે:", "🏃 આરોગ્ય ટિપ્સ:", "💊 દવા:", "🩺 અસ્વીકરણ:"
-        - Medical disclaimer in Gujarati: "🩺 કૃપા કરીને ક્લિનિકલ પુષ્ટિ માટે આ તારણોની ડૉક્ટર સાથે સમીક્ષા કરો." (Only append if query is medical/clinical in nature).
+        - Translate all headings, content, and bullet points to Gujarati.
+        - Example response structure:
+          🩺 તમારી રિપોર્ટ મુજબ તમારું કોલેસ્ટ્રોલ મોટાભાગે સામાન્ય છે.
+
+          💚 HDL થોડું ઓછું છે, એટલે:
+          • દરરોજ 30 મિનિટ ચાલવું
+          • ડ્રાયફ્રૂટ્સ ખાવા
+          • તેલિયું ખાવાનું ઓછું કરવું
+
+          🥗 લીલા શાકભાજી અને ફાઈબરવાળો ખોરાક લાભદાયક રહેશે.
+
+          ⚠️ આ AI આધારિત માર્ગદર્શન છે. કૃપા કરીને ડૉક્ટરની સલાહ જરૂર લો.
         """
     elif conversation_language == 'hindi_hinglish':
         lang_instruction = """
         Active Language is HINDI / HINGLISH.
         - You MUST respond in Hindi/Hinglish (mix of Hindi and English words as spoken naturally, or Hindi Devanagari script depending on user's input style).
-        - If the user uses Hinglish/Hindi, reply naturally in Hindi/Hinglish. Do not default to English.
-        - Do not say you are more comfortable in English or mention any language limitations.
         - Keep headings and formatting professional, utilizing natural Hindi/Hinglish.
           * E.g. "🩸 Blood Report Update", "🥗 Kya madad kar sakta hai:", "🏃 Health Tips:", "💊 Dawa:", "🩺 Disclaimer:"
         - Medical disclaimer in Hinglish/Hindi: "🩺 Doctor se clinical confirmation ke liye consult karein." (Only append if query is medical/clinical in nature).
@@ -772,11 +788,10 @@ def medical_chatbot(question, report_text):
     You are MediVision AI, a supportive, highly conversational, and friendly AI doctor assistant, behaving like Gemini or a ChatGPT medical assistant. You help the patient understand their health data, medical report parameters, or imaging scans in a warm, empathetic, and human tone.
 
     MULTILINGUAL SYSTEM PROMPT RULES (CRITICAL):
-    Always respond in the same language used by the user.
-    Maintain the same conversational tone and language across the session.
-    If the user uses Gujarati, reply fully in Gujarati.
-    If the user uses Hindi or Hinglish, reply naturally in Hindi/Hinglish.
-    Do not default to English.
+    Always respond in the SAME language as the user.
+    Never mention language preference or limitations.
+    Never force English.
+    Maintain conversational continuity in the detected language.
     
     {lang_instruction}
 
@@ -839,6 +854,17 @@ def medical_chatbot(question, report_text):
     headers = {
         "Content-Type": "application/json"
     }
+
+    # Print debug logs temporarily
+    detected_language = conversation_language
+    print("Detected Language:", detected_language)
+    try:
+        print("Final Generated Prompt:", prompt)
+    except Exception:
+        try:
+            print("Final Generated Prompt (encoded):", prompt.encode('utf-8', errors='replace').decode('ascii', errors='replace'))
+        except Exception:
+            pass
     
     try:
         response = requests.post(url, json=payload, headers=headers)
@@ -873,6 +899,15 @@ def medical_chatbot(question, report_text):
     # Store in session memory
     conversation_history.append({"role": "User", "content": question})
     conversation_history.append({"role": "AI", "content": text})
+
+    # Print final Gemini response safely
+    try:
+        print("Final Gemini Response:", text)
+    except Exception:
+        try:
+            print("Final Gemini Response (encoded):", text.encode('utf-8', errors='replace').decode('ascii', errors='replace'))
+        except Exception:
+            pass
 
     return text
 
