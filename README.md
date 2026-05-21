@@ -1,126 +1,222 @@
-# MediVision 🩺✨
+MediVision 🩺✨
+AI-Powered Medical Report & Diagnostic Scan Analyzer
 
-MediVision is a premium, AI-powered Medical Report & Diagnostic Scan Analyzer. It simplifies complex medical reports (PDFs, blood tests, prescriptions) and imaging scans (X-rays, MRIs, CT scans) into easy-to-understand clinical summaries, diet/exercise recommendations, lifestyle routines, and medicine instructions. It also features a context-aware interactive medical chatbot that communicates in English or Hinglish.
+🌟 Overview
 
----
+MediVision is an advanced AI-driven healthcare platform designed to simplify medical reports and diagnostic scans into clear, human-friendly insights. It helps users understand complicated medical information such as blood test reports, prescriptions, X-rays, MRI scans, and CT scans without requiring deep medical knowledge.
 
-## 🚀 Key Features
+The platform combines Artificial Intelligence, OCR technology, and modern web development to provide accurate summaries, health recommendations, medicine guidance, and interactive medical assistance in both English and Hinglish.
 
-* **Intelligent Document Intake**: Supports PDF, PNG, JPG, JPEG, and AVIF file uploads.
-* **Hybrid OCR System**: Extracts text using PyMuPDF (`fitz`) and Tesseract OCR with PIL image preprocessing (grayscale, contrast enhancement, sharpening, and binarization). Uses Google Gemini Multimodal OCR as a fallback.
-* **Auto-Classification**: Automatically classifies documents into **Lab Reports**, **Prescriptions**, **X-rays/Scans**, or **General Medical Documents** to apply specialized clinical analysis prompts.
-* **Smart Radiographical Diagnosis**: Processes diagnostic scans and X-rays using Google Gemini's vision models.
-* **Contextual Medical Chatbot**: An empathetic chatbot initialized with the context of your uploaded health document for follow-up questions.
-* **Bilingual Support (English & Hindi)**: Dynamic translation toggling of analysis cards with smooth micro-animations.
-* **Rich Animated UI**: Dark-mode glassmorphic interface with canvas-based background animation featuring floating particles and scrolling ECG waveforms.
+Unlike traditional report analyzers, MediVision focuses on delivering an intuitive and engaging experience through a visually rich interface and a context-aware chatbot.
 
----
+🚀 Core Features
+📄 Smart Medical Document Upload
 
-## 🏗️ Architecture & Tech Stack
+MediVision supports multiple medical document formats, including:
 
-MediVision is built with a decoupled client-server architecture:
+PDF Reports
+PNG Images
+JPG / JPEG Images
+AVIF Files
 
-```mermaid
-graph TD
-    User([User]) -->|Uploads PDF/Image| Frontend[Frontend: HTML/CSS/JS]
-    Frontend -->|POST Request| API[FastAPI Backend]
-    API -->|1. Preprocessing| OCR[OCR / PyMuPDF & Tesseract]
-    OCR -->|Text Content| Classifier[Gemini Document Classifier]
-    Classifier -->|Classified Type| Analyzer[Specialized Gemini Analyzer]
-    Analyzer -->|JSON Payload| API
-    API -->|Response| Frontend
-    Frontend -->|Interactive Chat| Chat[Gemini Contextual Chatbot]
-```
+Users can simply upload their medical documents, and the system automatically begins processing them.
 
-### Frontend
-* **Core**: HTML5, Vanilla JavaScript.
-* **Styling**: Vanilla CSS3 using custom HSL color systems, glassmorphism design, CSS variables, and keyframe animations.
-* **Animations**: Canvas-based custom medical molecular telemetry grid and dual-layer sinus ECG waves.
+🔍 Advanced OCR & Text Extraction
 
-### Backend
-* **Web Framework**: FastAPI (Python) for asynchronous endpoints.
-* **Document Processing & OCR**:
-  * `PyMuPDF` (fitz) for reading digital PDF text.
-  * `pytesseract` (Tesseract-OCR) for optical character recognition on scanned pages.
-  * `Pillow` (PIL) and `pillow-avif-plugin` for advanced image scaling, contrast adjustment, sharpening, and binarization.
-* **AI Engine**: Google Gemini API (`gemini-pro`, `gemini-3.1-flash-lite`) accessed via REST requests for text categorization, structured clinical analysis, and chat.
+The platform uses a hybrid OCR pipeline to extract text from both digital and scanned reports.
 
----
+Technologies Used:
+PyMuPDF (fitz) → Reads digital PDFs directly.
+Tesseract OCR → Extracts text from scanned documents.
+PIL (Python Imaging Library) → Enhances image quality before OCR.
+Image Enhancement Techniques:
+Grayscale conversion
+Contrast enhancement
+Image sharpening
+Upscaling
+Binarization for clearer text recognition
 
-## 🔍 Detailed System Workflow
+If local OCR fails, MediVision automatically switches to Google Gemini Multimodal OCR as a fallback mechanism.
 
-### Step 1: File Intake & Validation
-The frontend validates file extensions (`.pdf`, `.png`, `.jpg`, `.jpeg`, `.avif`). If valid, the user starts the analysis.
+🧠 Intelligent Document Classification
 
-### Step 2: Advanced OCR & Text Extraction
-1. **PDF Files**: The backend reads pages using `PyMuPDF`. If the extracted text is too short (< 50 chars), it renders the PDF pages as high-resolution images (2x zoom) and falls back to OCR.
-2. **Image Files**: Images are enhanced using PIL:
-   * Conversion to Grayscale.
-   * Upscaling for higher detail.
-   * Autocontrast normalization.
-   * Unsharp mask filtering.
-   * Dynamic threshold binarization.
-3. **Gemini Multimodal OCR Fallback**: If Tesseract is unavailable or fails, the image is base64 encoded and sent to Gemini with a specialized OCR extraction prompt.
+Once the text is extracted, the system automatically classifies the document into specific medical categories such as:
 
-### Step 3: Document Classification
-The extracted text and raw images are analyzed by Gemini to decide the document type. The system routes the content into one of four tailored processing pipelines:
-* **Lab Report**: Extracts medical parameters, findings, diet, exercise, medicines, and lifestyle pointers.
-* **Prescription**: Focuses strictly on medicine name, dosage, frequency, safety precautions, and instructions.
-* **X-ray / Scan**: Uses Gemini Vision to analyze structure, findings, anomalies, and recommendations.
-* **General Medical Document**: Generates administrative and general health summaries.
+Lab Reports
+Prescriptions
+X-rays / Scans
+General Medical Documents
 
-### Step 4: UI Rendering & Translation
-The frontend parses the JSON response and updates the UI cards. The user can toggle translation, which requests translation of the analysis JSON to Hindi via Gemini, cacheing the result for performance.
+This classification allows the AI model to generate more specialized and accurate analysis results.
 
-### Step 5: Advisory Chat Stream
-The chatbot uses session memory to allow users to ask questions. Every message is accompanied by the report context to prevent hallucinations.
+🩻 AI-Based Scan & X-ray Analysis
 
----
+MediVision can analyze radiology images using Google Gemini Vision models.
 
-## 🛠️ Local Setup Instructions
+The system can:
 
-### Prerequisites
-* Python 3.9 or higher
-* [Tesseract OCR installed locally](https://github.com/UB-Mannheim/tesseract/wiki) (Default expected path: `C:\Program Files\Tesseract-OCR\tesseract.exe`)
+Detect abnormalities
+Summarize scan findings
+Explain observations in simple language
+Provide lifestyle and health suggestions
 
-### 1. Clone & Navigate to Project
-```bash
+This makes complex medical imaging easier for normal users to understand.
+
+💬 Context-Aware Medical Chatbot
+
+The integrated chatbot understands the uploaded report context and allows users to ask follow-up questions naturally.
+
+Example:
+
+Users can ask:
+
+“What does my cholesterol level mean?”
+“Is this medicine safe?”
+“What foods should I avoid?”
+
+The chatbot responds based on the uploaded medical report, reducing irrelevant or hallucinated answers.
+
+🌐 Bilingual Support
+
+MediVision supports:
+
+English
+Hindi / Hinglish
+
+Users can instantly translate medical summaries using smooth animated UI transitions, making healthcare information accessible to a wider audience.
+
+🎨 Modern User Interface
+
+The frontend is designed using a premium glassmorphism-inspired dark theme with animated medical visuals.
+
+UI Highlights:
+Floating particles animation
+ECG waveform effects
+Smooth transitions
+Interactive cards
+Responsive design
+
+The interface is clean, modern, and optimized for user engagement.
+
+🏗️ System Architecture
+
+MediVision follows a client-server architecture where the frontend and backend work independently.
+
+![System Architecture](./image/image.png)
+💻 Technology Stack
+Frontend
+HTML5
+CSS3
+Vanilla JavaScript
+Design Features
+Glassmorphism UI
+HSL-based color system
+CSS animations
+Canvas-based medical effects
+Backend
+FastAPI (Python)
+OCR & Processing
+PyMuPDF
+pytesseract
+Pillow (PIL)
+pillow-avif-plugin
+AI Integration
+Google Gemini API
+Gemini Vision Models
+⚙️ Detailed Workflow
+Step 1: File Validation
+
+The frontend first validates the uploaded file type to ensure compatibility.
+
+Step 2: OCR & Image Processing
+For PDFs:
+Extract text directly using PyMuPDF.
+If insufficient text is detected, pages are converted into high-resolution images for OCR.
+For Images:
+
+The system enhances images using:
+
+Grayscale conversion
+Sharpening
+Contrast normalization
+Threshold binarization
+Step 3: AI Classification
+
+The extracted content is sent to Gemini AI for classification into the appropriate medical category.
+
+Step 4: Specialized Medical Analysis
+
+Based on document type, different AI prompts are used:
+
+Lab Reports
+Health parameter analysis
+Diet suggestions
+Lifestyle recommendations
+Prescriptions
+Medicine details
+Dosage instructions
+Safety precautions
+X-rays & Scans
+Structural observations
+Abnormality detection
+Recommendations
+Step 5: Frontend Rendering
+
+The backend sends structured JSON responses which are rendered into dynamic UI cards.
+
+Step 6: AI Chat Assistance
+
+Users can continue interacting with the chatbot for personalized explanations and medical guidance.
+
+🛠️ Installation & Setup
+Prerequisites
+
+Before running the project, install:
+
+Python 3.9+
+Tesseract OCR
+Clone the Repository
 git clone https://github.com/Adarshtiwari44/MediVision.git
 cd MediVision
-```
+Configure Environment Variables
 
-### 2. Configure Environment Variables
-Create a `.env` file in the root directory:
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
+Create a .env file:
+
+GEMINI_API_KEY=your_api_key
 GEMINI_MODEL=gemini-3.1-flash-lite
-```
-
-### 3. Setup Virtual Environment & Install Dependencies
-```powershell
-# Create venv
+Create Virtual Environment
 python -m venv venv
-
-# Activate venv
+Activate Environment
 .\venv\Scripts\activate
-
-# Install requirements
+Install Dependencies
 pip install -r requirements.txt
-```
-
-### 4. Run Backend Server
-```powershell
+Run Backend Server
 python -m uvicorn backend.main:app --reload --port 8000
-```
+Run Frontend
 
-### 5. Run Frontend Server
-In a new terminal window:
-```powershell
+Open another terminal and run:
+
 python -m http.server 5500
-```
-Open `http://localhost:5500/Frontend` in your web browser.
 
----
+Then visit:
 
-## 🩺 Clinical Disclaimer
-*MediVision is an AI-assisted analysis tool designed for informational and educational purposes only. It does not provide medical diagnoses or treatment advice. Always consult a certified healthcare professional before making clinical decisions.*
+http://localhost:5500/Frontend
+⚠️ Medical Disclaimer
+
+MediVision is an AI-assisted healthcare support tool developed for educational and informational purposes only.
+
+It does not replace professional medical advice, diagnosis, or treatment. Users should always consult certified healthcare professionals before making medical decisions.
+
+🎯 Conclusion
+
+MediVision demonstrates how modern AI technologies can simplify healthcare accessibility by transforming difficult medical data into understandable insights.
+
+By combining:
+
+OCR,
+Artificial Intelligence,
+Medical image analysis,
+Context-aware chat systems,
+and a modern interactive UI,
+
+the platform creates a smarter and more user-friendly healthcare experience for everyone.
